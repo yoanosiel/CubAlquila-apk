@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Styled house with an arch inside, bold lines -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20 L20,48 L27,53 L54,31 L81,53 L88,48 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,51 L32,82 C32,86 36,86 40,86 L68,86 C72,86 76,86 76,82 L76,51 Z" />
+    <!-- Inner cutout for a classic circular arch door/window -->
+    <path
+        android:fillColor="#C85A32"
+        android:pathData="M44,86 L44,68 C44,60 54,60 54,60 C54,60 64,60 64,68 L64,86 Z" />
+</vector>

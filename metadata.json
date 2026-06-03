@@ -1,0 +1,6 @@
+{
+  "name": "Alquileres Cuba",
+  "description": "Una aplicación para buscar y publicar alquileres de casas, garajes, carros y lugares de interés en Cuba por provincia y municipio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
