@@ -20,6 +20,9 @@ jobs:
         java-version: '21'
         cache: 'gradle'
 
+    - name: Restaurar Gradle Wrapper (Crea el archivo ejecutable faltante)
+      run: gradle wrapper
+
     - name: Conceder Permisos de Ejecución a Gradle
       run: chmod +x gradlew
 
