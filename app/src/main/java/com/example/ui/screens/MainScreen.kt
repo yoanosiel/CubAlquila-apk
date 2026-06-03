@@ -331,7 +331,7 @@ fun ExplorerTab(viewModel: RentalViewModel) {
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp)
+                .padding(vertical = 2.dp)
                 .testTag("search_field"),
             shape = CircleShape,
             colors = OutlinedTextFieldDefaults.colors(
@@ -346,36 +346,40 @@ fun ExplorerTab(viewModel: RentalViewModel) {
             )
         )
 
-        // Location Info Toolbar & Filters
+        // Location Info Toolbar & Filters Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(10.dp)
+                    )
                     .clickable { showFilterDialog = true }
-                    .padding(vertical = 4.dp, horizontal = 2.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Icon(
                     Icons.Default.LocationOn,
-                    contentDescription = "Ubicación",
+                    contentDescription = "Filtrar por ubicación",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = if (onlyNearMe) {
-                        "Cerca de: ${currentLocProfile.municipality}, ${currentLocProfile.province}"
+                        "Cerca de mí"
                     } else if (selectedProvince == "Todas") {
-                        "Toda Cuba (Filtrar...)"
+                        "Toda Cuba ▾"
                     } else {
-                        "$selectedProvince" + (if (selectedMunicipality != "Todos") ", $selectedMunicipality" else "")
+                        "$selectedProvince" + (if (selectedMunicipality != "Todos") ", $selectedMunicipality" else "") + " ▾"
                     },
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     ),
@@ -385,18 +389,27 @@ fun ExplorerTab(viewModel: RentalViewModel) {
             }
 
             // Location settings reset or custom locator switch
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 0.dp)
+            ) {
                 Text(
                     text = "A mi alrededor",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(2.dp))
                 Switch(
                     checked = onlyNearMe,
                     onCheckedChange = { viewModel.onlyNearMe.value = it },
                     modifier = Modifier
-                        .scale(0.8f)
+                        .scale(0.7f)
                         .testTag("near_me_toggle")
                 )
             }
@@ -407,7 +420,7 @@ fun ExplorerTab(viewModel: RentalViewModel) {
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(categories) { category ->
@@ -444,53 +457,6 @@ fun ExplorerTab(viewModel: RentalViewModel) {
                     ),
                     modifier = Modifier.testTag("chip_$category")
                 )
-            }
-        }
-
-        // Sort option header bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "${filteredListings.size} alquileres encontrados",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
-
-            var showSortMenu by remember { mutableStateOf(false) }
-            Box {
-                TextButton(
-                    onClick = { showSortMenu = true },
-                    modifier = Modifier.testTag("sort_button")
-                ) {
-                    Icon(Icons.Default.Sort, contentDescription = "Ordenar", modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Orden: ${sortBy.displayName}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                DropdownMenu(
-                    expanded = showSortMenu,
-                    onDismissRequest = { showSortMenu = false }
-                ) {
-                    SortOption.values().forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option.displayName) },
-                            onClick = {
-                                viewModel.sortBy.value = option
-                                showSortMenu = false
-                            },
-                            modifier = Modifier.testTag("sort_${option.name}")
-                        )
-                    }
-                }
             }
         }
 
@@ -545,6 +511,55 @@ fun ExplorerTab(viewModel: RentalViewModel) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
+                item {
+                    // Sort option and results count inside scrollable LazyColumn
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${filteredListings.size} alquileres encontrados",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        )
+
+                        var showSortMenu by remember { mutableStateOf(false) }
+                        Box {
+                            TextButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.testTag("sort_button")
+                            ) {
+                                Icon(Icons.Default.Sort, contentDescription = "Ordenar", modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Orden: ${sortBy.displayName}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                SortOption.values().forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.displayName) },
+                                        onClick = {
+                                            viewModel.sortBy.value = option
+                                            showSortMenu = false
+                                        },
+                                        modifier = Modifier.testTag("sort_${option.name}")
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 items(filteredListings) { listing ->
                     RentalCardItem(
                         listing = listing,
@@ -782,7 +797,58 @@ fun PublishTab(viewModel: RentalViewModel) {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            imageUrl = uri.toString()
+            try {
+                // Safely calculate aspect-ratio scale-down factor without reading massive bitmaps in RAM
+                val streamForSize = context.contentResolver.openInputStream(uri)
+                val options = android.graphics.BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                android.graphics.BitmapFactory.decodeStream(streamForSize, null, options)
+                streamForSize?.close()
+
+                val outWidth = options.outWidth
+                val outHeight = options.outHeight
+                
+                // Max size around 640px creates very light JPEGs under 35KB
+                var scale = 1
+                val maxDimension = 640
+                if (outWidth > maxDimension || outHeight > maxDimension) {
+                    val largerSide = maxOf(outWidth, outHeight)
+                    scale = Math.round(largerSide.toFloat() / maxDimension.toFloat())
+                }
+
+                // Load downsampled bitmap
+                val streamForBitmap = context.contentResolver.openInputStream(uri)
+                val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+                    inSampleSize = scale
+                }
+                val decodedBitmap = android.graphics.BitmapFactory.decodeStream(streamForBitmap, null, decodeOptions)
+                streamForBitmap?.close()
+
+                if (decodedBitmap != null) {
+                    // Force exact scale to be under max dimension
+                    var finalBitmap = decodedBitmap
+                    if (decodedBitmap.width > maxDimension || decodedBitmap.height > maxDimension) {
+                        val ratio = decodedBitmap.width.toFloat() / decodedBitmap.height.toFloat()
+                        val (w, h) = if (ratio > 1) {
+                            Pair(maxDimension, (maxDimension / ratio).toInt())
+                        } else {
+                            Pair((maxDimension * ratio).toInt(), maxDimension)
+                        }
+                        finalBitmap = android.graphics.Bitmap.createScaledBitmap(decodedBitmap, w, h, true)
+                    }
+
+                    val outputStream = java.io.ByteArrayOutputStream()
+                    finalBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, outputStream)
+                    val byteArray = outputStream.toByteArray()
+                    val base64String = android.util.Base64.encodeToString(byteArray, android.util.Base64.DEFAULT)
+                    imageUrl = "data:image/jpeg;base64,$base64String"
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Graceful fallback to raw string Uri
+                imageUrl = uri.toString()
+            }
         }
     }
 
@@ -1154,7 +1220,16 @@ fun PublishTab(viewModel: RentalViewModel) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
-                                        .data(imageUrl)
+                                        .data(if (imageUrl.startsWith("data:image")) {
+                                            try {
+                                                val base64Part = imageUrl.substringAfter("base64,")
+                                                android.util.Base64.decode(base64Part, android.util.Base64.DEFAULT)
+                                            } catch (e: Exception) {
+                                                imageUrl
+                                            }
+                                        } else {
+                                            imageUrl
+                                        })
                                         .crossfade(true)
                                         .build(),
                                     contentDescription = "Vista previa de la foto",
@@ -1812,9 +1887,29 @@ fun rememberImageFallbackPainter(imageUrl: String, category: String): androidx.c
                 .build()
         )
     }
+
+    val dataModel: Any = remember(imageUrl) {
+        if (imageUrl.startsWith("data:image") && imageUrl.contains("base64,")) {
+            try {
+                val base64Part = imageUrl.substringAfter("base64,")
+                android.util.Base64.decode(base64Part, android.util.Base64.DEFAULT)
+            } catch (e: Exception) {
+                imageUrl
+            }
+        } else if (imageUrl.startsWith("/9j/") || imageUrl.length > 500) {
+            try {
+                android.util.Base64.decode(imageUrl, android.util.Base64.DEFAULT)
+            } catch (e: Exception) {
+                imageUrl
+            }
+        } else {
+            imageUrl
+        }
+    }
+
     return rememberAsyncImagePainter(
         model = ImageRequest.Builder(LocalContext.current)
-            .data(imageUrl)
+            .data(dataModel)
             .crossfade(true)
             .build()
     )
