@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-  namespace = "com.consciouspay.cubalquila"
+  namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
