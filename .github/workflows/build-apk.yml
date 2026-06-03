@@ -29,13 +29,19 @@ jobs:
     - name: Compilar APK en Modo Release
       run: ./gradlew assembleRelease
 
-    - name: Firmar APK Oficial con apksigner
+    - name: Firmar APK Oficial con apksigner (Localización Dinámica)
       run: |
+        # Buscar el ejecutable apksigner dentro de las carpetas del SDK de Android en el servidor
+        REAL_APKSIGNER=$(find $ANDROID_HOME/build-tools/ -name "apksigner" | sort | tail -n 1)
+        
+        # Localizar la APK generada por la compilación
         BASE_APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
-        apksigner sign --ks app/taxicuba-identity.jks \
-                       --ks-pass pass:Hisa.261199. \
-                       --out app/build/outputs/apk/release/CubAlquila.apk \
-                       $BASE_APK
+        
+        # Firmar usando la ruta exacta encontrada en el sistema
+        $REAL_APKSIGNER sign --ks app/taxicuba-identity.jks \
+                             --ks-pass pass:Hisa.261199. \
+                             --out app/build/outputs/apk/release/CubAlquila.apk \
+                             $BASE_APK
 
     - name: Subir Paquete de Descarga a GitHub Artifacts
       uses: actions/upload-artifact@v4
