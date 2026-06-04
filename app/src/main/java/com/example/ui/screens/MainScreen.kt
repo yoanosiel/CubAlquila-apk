@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -166,23 +169,18 @@ fun ExplorerTab(viewModel: RentalViewModel) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp, bottom = 8.dp),
+                .padding(top = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Custom Styled "CubAlquila" Red & White Logo Typography/Badge
+                // Custom Styled clean typography logo in Red & dynamic onBackground
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .background(
-                            color = Color(0xFF1E293B), // Sleek Slate container for high visibility
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(vertical = 2.dp)
                 ) {
                     Text(
                         text = "Cub",
@@ -196,7 +194,7 @@ fun ExplorerTab(viewModel: RentalViewModel) {
                         text = "Alquila",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Black,
-                            color = Color.White, // White
+                            color = MaterialTheme.colorScheme.onBackground, // Seamlessly adapts to Dark/Light themes
                             letterSpacing = 0.5.sp
                         )
                     )
@@ -220,7 +218,7 @@ fun ExplorerTab(viewModel: RentalViewModel) {
             
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 // Cloud Sync Refresh Button with spinning/circular progress feedback
                 IconButton(
@@ -247,8 +245,8 @@ fun ExplorerTab(viewModel: RentalViewModel) {
                     }
                 }
 
-                // Location Simulator Button styled
-                FilledTonalButton(
+                // GPS Auto-detect configured as a clean, space-saving IconButton
+                IconButton(
                     onClick = {
                         val hasFine = androidx.core.content.ContextCompat.checkSelfPermission(
                             context,
@@ -270,159 +268,151 @@ fun ExplorerTab(viewModel: RentalViewModel) {
                             )
                         }
                     },
-                    modifier = Modifier.testTag("gps_auto_detect"),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    modifier = Modifier.testTag("gps_auto_detect")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MyLocation,
+                        imageVector = if (isDetecting) Icons.Default.LocationSearching else Icons.Default.MyLocation,
                         contentDescription = "Detectar Ubicación",
+                        tint = if (isDetecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // GPS Pulse indicator if active - slimmed down to a tiny, neat inline row to save 50dp of height!
+        if (isDetecting) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = detectionMessage,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+
+        // Search & Location Row (Side-by-side, extremely space-saving!)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Search field
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.searchQuery.value = it },
+                placeholder = { Text("Buscar...", style = MaterialTheme.typography.bodyMedium) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar", modifier = Modifier.size(18.dp)) },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { viewModel.searchQuery.value = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Limpiar", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .weight(1.1f)
+                    .testTag("search_field"),
+                singleLine = true,
+                shape = CircleShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    focusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+
+            // Location Badge Trigger
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                shape = CircleShape,
+                modifier = Modifier
+                    .weight(0.9f)
+                    .clickable { showFilterDialog = true }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = "Filtrar por ubicación",
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (isDetecting) "Pulsando..." else "Auto-GPS",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium
+                        text = if (selectedProvince == "Todas") {
+                            "Toda Cuba ▾"
+                        } else {
+                            "$selectedProvince" + (if (selectedMunicipality != "Todos") " ▾" else " ▾")
+                        },
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
         }
 
-        // GPS Pulse indicator if active
-        if (isDetecting) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = detectionMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-
-        // Search text field
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { viewModel.searchQuery.value = it },
-            placeholder = { Text("Buscar...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-            trailingIcon = {
-                if (searchQuery.isNotBlank()) {
-                    IconButton(onClick = { viewModel.searchQuery.value = "" }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Limpiar")
-                    }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp)
-                .testTag("search_field"),
-            shape = CircleShape,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                focusedBorderColor = MaterialTheme.colorScheme.outline,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                focusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
-
-        // Location Info Toolbar & Filters Row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .background(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .clickable { showFilterDialog = true }
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                Icon(
-                    Icons.Default.LocationOn,
-                    contentDescription = "Filtrar por ubicación",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (onlyNearMe) {
-                        "Cerca de mí"
-                    } else if (selectedProvince == "Todas") {
-                        "Toda Cuba ▾"
-                    } else {
-                        "$selectedProvince" + (if (selectedMunicipality != "Todos") ", $selectedMunicipality" else "") + " ▾"
-                    },
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // Location settings reset or custom locator switch
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 0.dp)
-            ) {
-                Text(
-                    text = "A mi alrededor",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Switch(
-                    checked = onlyNearMe,
-                    onCheckedChange = { viewModel.onlyNearMe.value = it },
-                    modifier = Modifier
-                        .scale(0.7f)
-                        .testTag("near_me_toggle")
-                )
-            }
-        }
-
-        // Category Selection Tab Bar (Scrollable chips)
+        // Category Selection Tab Bar (Scrollable chips with beautiful inline integration of proximity filter!)
         val categories = listOf("Todos", "Casa", "Garaje", "Carro", "Otros")
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // "Cerca de mí" integrated seamlessly as the leading filter chip
+            item {
+                val isNearMeActive = onlyNearMe
+                FilterChip(
+                    selected = isNearMeActive,
+                    onClick = { viewModel.onlyNearMe.value = !onlyNearMe },
+                    label = { Text("Cerca de mí", fontWeight = if (isNearMeActive) FontWeight.Bold else FontWeight.Normal) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.LocationSearching,
+                            contentDescription = "Cerca de mí",
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        containerColor = Color.Transparent,
+                        labelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    ),
+                    modifier = Modifier.testTag("chip_near_me")
+                )
+            }
+
             items(categories) { category ->
                 val isSelected = selectedCategory == category
                 
@@ -793,61 +783,84 @@ fun PublishTab(viewModel: RentalViewModel) {
     var imageUrl by remember { mutableStateOf("") }
     var pricePeriod by remember { mutableStateOf("Día") }
 
+    val scope = rememberCoroutineScope()
+    var isUploadingImage by remember { mutableStateOf(false) }
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                // Safely calculate aspect-ratio scale-down factor without reading massive bitmaps in RAM
-                val streamForSize = context.contentResolver.openInputStream(uri)
-                val options = android.graphics.BitmapFactory.Options().apply {
-                    inJustDecodeBounds = true
-                }
-                android.graphics.BitmapFactory.decodeStream(streamForSize, null, options)
-                streamForSize?.close()
+            isUploadingImage = true
+            scope.launch(Dispatchers.IO) {
+                try {
+                    // Safely calculate aspect-ratio scale-down factor without reading massive bitmaps in RAM
+                    val streamForSize = context.contentResolver.openInputStream(uri)
+                    val options = android.graphics.BitmapFactory.Options().apply {
+                        inJustDecodeBounds = true
+                    }
+                    android.graphics.BitmapFactory.decodeStream(streamForSize, null, options)
+                    streamForSize?.close()
 
-                val outWidth = options.outWidth
-                val outHeight = options.outHeight
-                
-                // Max size around 640px creates very light JPEGs under 35KB
-                var scale = 1
-                val maxDimension = 640
-                if (outWidth > maxDimension || outHeight > maxDimension) {
-                    val largerSide = maxOf(outWidth, outHeight)
-                    scale = Math.round(largerSide.toFloat() / maxDimension.toFloat())
-                }
-
-                // Load downsampled bitmap
-                val streamForBitmap = context.contentResolver.openInputStream(uri)
-                val decodeOptions = android.graphics.BitmapFactory.Options().apply {
-                    inSampleSize = scale
-                }
-                val decodedBitmap = android.graphics.BitmapFactory.decodeStream(streamForBitmap, null, decodeOptions)
-                streamForBitmap?.close()
-
-                if (decodedBitmap != null) {
-                    // Force exact scale to be under max dimension
-                    var finalBitmap = decodedBitmap
-                    if (decodedBitmap.width > maxDimension || decodedBitmap.height > maxDimension) {
-                        val ratio = decodedBitmap.width.toFloat() / decodedBitmap.height.toFloat()
-                        val (w, h) = if (ratio > 1) {
-                            Pair(maxDimension, (maxDimension / ratio).toInt())
-                        } else {
-                            Pair((maxDimension * ratio).toInt(), maxDimension)
-                        }
-                        finalBitmap = android.graphics.Bitmap.createScaledBitmap(decodedBitmap, w, h, true)
+                    val outWidth = options.outWidth
+                    val outHeight = options.outHeight
+                    
+                    // Max size around 800px creates very light JPEGs for fast uploading
+                    var scale = 1
+                    val maxDimension = 800
+                    if (outWidth > maxDimension || outHeight > maxDimension) {
+                        val largerSide = maxOf(outWidth, outHeight)
+                        scale = Math.round(largerSide.toFloat() / maxDimension.toFloat())
                     }
 
-                    val outputStream = java.io.ByteArrayOutputStream()
-                    finalBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, outputStream)
-                    val byteArray = outputStream.toByteArray()
-                    val base64String = android.util.Base64.encodeToString(byteArray, android.util.Base64.DEFAULT)
-                    imageUrl = "data:image/jpeg;base64,$base64String"
+                    // Load downsampled bitmap
+                    val streamForBitmap = context.contentResolver.openInputStream(uri)
+                    val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+                        inSampleSize = scale
+                    }
+                    val decodedBitmap = android.graphics.BitmapFactory.decodeStream(streamForBitmap, null, decodeOptions)
+                    streamForBitmap?.close()
+
+                    if (decodedBitmap != null) {
+                        // Force exact scale to be under max dimension
+                        var finalBitmap = decodedBitmap
+                        if (decodedBitmap.width > maxDimension || decodedBitmap.height > maxDimension) {
+                            val ratio = decodedBitmap.width.toFloat() / decodedBitmap.height.toFloat()
+                            val (w, h) = if (ratio > 1) {
+                                Pair(maxDimension, (maxDimension / ratio).toInt())
+                            } else {
+                                Pair((maxDimension * ratio).toInt(), maxDimension)
+                            }
+                            finalBitmap = android.graphics.Bitmap.createScaledBitmap(decodedBitmap, w, h, true)
+                        }
+
+                        val outputStream = java.io.ByteArrayOutputStream()
+                        finalBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 75, outputStream)
+                        val byteArray = outputStream.toByteArray()
+                        
+                        // Upload directly to free CDN storage
+                        val uploadedUrl = com.example.data.repository.SharedSyncService.uploadImage(byteArray)
+                        withContext(Dispatchers.Main) {
+                            if (uploadedUrl != null) {
+                                imageUrl = uploadedUrl
+                                Toast.makeText(context, "¡Imagen subida y compartida con éxito de forma gratuita!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Error al subir la imagen al servidor. Inténtelo de nuevo.", Toast.LENGTH_LONG).show()
+                            }
+                            isUploadingImage = false
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "No se pudo leer el archivo de imagen.", Toast.LENGTH_SHORT).show()
+                            isUploadingImage = false
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Error al procesar la imagen: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        isUploadingImage = false
+                    }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // Graceful fallback to raw string Uri
-                imageUrl = uri.toString()
             }
         }
     }
@@ -1210,13 +1223,40 @@ fun PublishTab(viewModel: RentalViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
-                            .clickable { launcher.launch("image/*") },
+                            .clickable(enabled = !isUploadingImage) { launcher.launch("image/*") },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                         )
                     ) {
-                        if (imageUrl.isNotBlank()) {
+                        if (isUploadingImage) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(36.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 3.dp
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Subiendo foto a la nube...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Guardando de forma optimizada y gratuita",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                        } else if (imageUrl.isNotBlank()) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
@@ -1395,11 +1435,22 @@ fun PublishTab(viewModel: RentalViewModel) {
                         .fillMaxWidth()
                         .height(50.dp)
                         .testTag("publish_submit_button"),
+                    enabled = !isUploadingImage,
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = "Publicar")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Publicar Ahora", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (isUploadingImage) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Subiendo imagen...", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    } else {
+                        Icon(Icons.Default.CloudUpload, contentDescription = "Publicar")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Publicar Ahora", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
         }

@@ -6,6 +6,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -15,7 +16,7 @@ object SharedSyncService {
     private const val TAG = "SharedSyncService"
     
     // Completely free-to-use, high performance, and unlimited public HTTPS key-value storage bucket
-    private const val BASE_URL = "https://kvdb.io/AlquileresCubaAppletDB_2026_qmpwzx/listings"
+    private const val BASE_URL = "https://kvdb.io/AlquileresCubaAppletDB_2026_qmpwzx/listings_v2"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -84,6 +85,43 @@ object SharedSyncService {
         } catch (e: Exception) {
             Log.e(TAG, "Exception during upload to cloud sync: ${e.message}", e)
             return false
+        }
+    }
+
+    /**
+     * Uploads an image byte array to Catbox and returns the public web URL.
+     * If failed, returns null.
+     */
+    fun uploadImage(imageBytes: ByteArray): String? {
+        val imageBody = imageBytes.toRequestBody("image/jpeg".toMediaType())
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("reqtype", "fileupload")
+            .addFormDataPart("fileToUpload", "image.jpg", imageBody)
+            .build()
+
+        val request = Request.Builder()
+            .url("https://catbox.moe/user/api.php")
+            .post(requestBody)
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Error uploading image to Catbox: ${response.code} ${response.message}")
+                    return null
+                }
+                val responseBodyStr = response.body?.string()?.trim()
+                if (responseBodyStr.isNullOrBlank() || !responseBodyStr.startsWith("http")) {
+                    Log.e(TAG, "Invalid response from Catbox: $responseBodyStr")
+                    return null
+                }
+                Log.d(TAG, "Successfully uploaded image to Catbox: $responseBodyStr")
+                return responseBodyStr
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during image upload to Catbox: ${e.message}", e)
+            return null
         }
     }
 }

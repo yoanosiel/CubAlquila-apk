@@ -99,8 +99,20 @@ class RentalRepository(private val rentalDao: RentalDao) {
                 Log.d("RentalRepository", "Inserted $insertedCount new remote listings locally.")
             }
 
-            // 3. Find our own local created listings that are not yet uploaded
+            // Sync departures/deletions: Prune local listings that are NOT user created and no longer exist on the cloud
             val remoteUuids = remoteListings.map { it.uuid }.toSet()
+            var prunedCount = 0
+            for (local in localListings) {
+                if (!local.isUserCreated && !remoteUuids.contains(local.uuid)) {
+                    rentalDao.deleteListing(local)
+                    prunedCount++
+                }
+            }
+            if (prunedCount > 0) {
+                Log.d("RentalRepository", "Pruned $prunedCount listings locally that were removed from the cloud.")
+            }
+
+            // 3. Find our own local created listings that are not yet uploaded
             val localToUpload = localListings.filter { it.isUserCreated && !remoteUuids.contains(it.uuid) }
             
             if (localToUpload.isNotEmpty()) {
@@ -128,20 +140,7 @@ class RentalRepository(private val rentalDao: RentalDao) {
     }
 
     suspend fun prepopulateIfNeeded() = withContext(Dispatchers.IO) {
-        try {
-            val localListings = rentalDao.getAllListings().firstOrNull() ?: emptyList()
-            var deletedCount = 0
-            for (local in localListings) {
-                if (!local.isUserCreated) {
-                    rentalDao.deleteListing(local)
-                    deletedCount++
-                }
-            }
-            if (deletedCount > 0) {
-                Log.d("RentalRepository", "Purged $deletedCount old non-user-created/mock listings on startup.")
-            }
-        } catch (e: Exception) {
-            Log.e("RentalRepository", "Error purging mock data: ${e.message}")
-        }
+        // Cached data is fully preserved on startup for perfect offline access and to prevent image disappearances
+        Log.d("RentalRepository", "Preserving local cache for instant offline access.")
     }
 }
