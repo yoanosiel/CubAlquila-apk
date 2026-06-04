@@ -20,16 +20,14 @@ jobs:
         java-version: '17'
         cache: 'gradle'
 
-    - name: Vincular Llave de Firmas para Gradle
+    - name: Desactivar firma obligatoria en Gradle
       run: |
-        # Busca tu archivo .jks actual y crea la copia exacta que build.gradle exige
-        REAL_JKS=$(find . -name "*.jks" | head -n 1)
-        if [ ! -z "$REAL_JKS" ]; then
-          cp "$REAL_JKS" ./my-upload-key.jks
-          echo "✔ Llave JKS vinculada correctamente como my-upload-key.jks"
-        else
-          echo "❌ Error: No se encontró ningún archivo de firma .jks en el proyecto."
-          exit 1
+        # Comenta las líneas de firma nativa para que Gradle compile sin pedir contraseñas
+        if [ -f app/build.gradle ]; then
+          sed -i 's/\(.*signingConfig.*\)/\/\/ \1/g' app/build.gradle
+        fi
+        if [ -f app/build.gradle.kts ]; then
+          sed -i 's/\(.*signingConfig.*\)/\/\/ \1/g' app/build.gradle.kts
         fi
 
     - name: Conceder Permisos de Ejecución a Gradle
@@ -38,8 +36,24 @@ jobs:
     - name: Compilar APK con Gradle
       run: ./gradlew assembleRelease
 
+    - name: Firmar APK con apksigner de forma externa
+      run: |
+        BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
+        UNSIGNED_APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+        JKS_FILE=$(find . -name "*.jks" | head -1)
+        
+        echo "APK encontrado: $UNSIGNED_APK"
+        echo "Llave JKS encontrada: $JKS_FILE"
+        
+        if [ -z "$UNSIGNED_APK" ] || [ -z "$JKS_FILE" ]; then
+          echo "❌ Error: No se encontró el APK generado o el archivo de firmas .jks"
+          exit 1
+        fi
+        
+        $BUILD_TOOLS_DIR/apksigner sign --ks "$JKS_FILE" --ks-pass pass:Hisa.261199. --out CubAlquila-Final.apk "$UNSIGNED_APK"
+
     - name: Subir APK Generado a GitHub
       uses: actions/upload-artifact@v4
       with:
         name: CubAlquila-Release-APK
-        path: app/build/outputs/apk/release/*.apk
+        path: CubAlquila-Final.apk
