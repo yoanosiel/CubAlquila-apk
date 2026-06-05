@@ -21,28 +21,37 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Truco del Espejo - Duplicar JKS con el nombre esperado
+      run: |
+        # Buscamos tu llave real en el proyecto
+        REAL_KEY=$(find . -name "taxicuba-identity.jks" | head -n 1)
+        echo "Llave real encontrada en: $REAL_KEY"
+        
+        # Copiamos la llave a la raíz con el nombre exacto que Gradle está exigiendo rigurosamente
+        cp "$REAL_KEY" ./my-upload-key.jks
+        echo "Espejo creado exitosamente como ./my-upload-key.jks"
+
     - name: Conceder permisos de ejecución a gradlew
       run: chmod +x ./gradlew
 
-    - name: Compilar APK (Modo Release Forzado)
-      # Desactivamos el cache y le inyectamos tu JKS real en la propiedad que Gradle está reclamando
+    - name: Compilar APK (Modo Release Autorizado)
+      # Inyectamos de igual forma la contraseña real para el empaquetado interno de Gradle
       run: |
-        KEY_PATH=$(find . -name "taxicuba-identity.jks" | head -n 1)
-        ./gradlew assembleRelease --no-configuration-cache -Pandroid.injected.signing.store.file="$KEY_PATH" || ./gradlew assembleRelease --no-configuration-cache
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.password="Hisa.261199." \
+          -Pandroid.injected.signing.key.alias="taxicuba-identity" \
+          -Pandroid.injected.signing.key.password="Hisa.261199."
 
     - name: Instalar apksigner en el servidor
       run: sudo apt-get update && sudo apt-get install -y apksigner
 
-    - name: Firmar APK con llave JKS
+    - name: Firmar APK con el nombre oficial
       run: |
         APK_PATH=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
-        KEY_PATH=$(find . -name "taxicuba-identity.jks" | head -n 1)
+        echo "APK generado para firmar: $APK_PATH"
         
-        echo "APK encontrado: $APK_PATH"
-        echo "Llave encontrada: $KEY_PATH"
-        
-        # Firmamos usando la contraseña que me diste directamente en el flujo
-        apksigner sign --ks "$KEY_PATH" --ks-pass pass:"Hisa.261199." --out CubAlquila.apk "$APK_PATH"
+        # Sellamos de forma definitiva la APK con el nombre CubAlquila.apk
+        apksigner sign --ks ./my-upload-key.jks --ks-pass pass:"Hisa.261199." --out CubAlquila.apk "$APK_PATH"
 
     - name: Subir APK Generado a GitHub
       uses: actions/upload-artifact@v4
