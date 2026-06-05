@@ -24,29 +24,25 @@ jobs:
     - name: Conceder permisos de ejecución a gradlew
       run: chmod +x ./gradlew
 
-    - name: Compilar APK (Modo Release Unsigned)
-      # Usamos assembleRelease pero le decimos a Gradle que ignore errores de firmado faltante
-      run: ./gradlew assembleRelease -Pandroid.injected.signing.store.file="" || ./gradlew assembleRelease
+    - name: Compilar APK (Modo Release Forzado)
+      # Desactivamos el cache y le inyectamos tu JKS real en la propiedad que Gradle está reclamando
+      run: |
+        KEY_PATH=$(find . -name "taxicuba-identity.jks" | head -n 1)
+        ./gradlew assembleRelease --no-configuration-cache -Pandroid.injected.signing.store.file="$KEY_PATH" || ./gradlew assembleRelease --no-configuration-cache
 
     - name: Instalar apksigner en el servidor
       run: sudo apt-get update && sudo apt-get install -y apksigner
 
     - name: Firmar APK con llave JKS
       run: |
-        # Buscamos cualquier APK generado (sea release o unsigned)
         APK_PATH=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
         KEY_PATH=$(find . -name "taxicuba-identity.jks" | head -n 1)
         
         echo "APK encontrado: $APK_PATH"
         echo "Llave encontrada: $KEY_PATH"
         
-        if [ -z "$APK_PATH" ]; then
-          echo "Error: No se generó ningún archivo APK."
-          exit 1
-        fi
-        
-        # Firmamos manualmente el APK dejando el nombre definitivo listo
-        apksigner sign --ks "$KEY_PATH" --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} --out CubAlquila.apk "$APK_PATH"
+        # Firmamos usando la contraseña que me diste directamente en el flujo
+        apksigner sign --ks "$KEY_PATH" --ks-pass pass:"Hisa.261199." --out CubAlquila.apk "$APK_PATH"
 
     - name: Subir APK Generado a GitHub
       uses: actions/upload-artifact@v4
