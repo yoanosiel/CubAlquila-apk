@@ -51,7 +51,7 @@ jobs:
         echo "✔ Llave encontrada: $JKS_FILE"
         
         # Aplicamos la firma usando exactamente tu contraseña con el punto final
-        apksigner sign --ks "$JKS_FILE" --ks-pass "pass:Hisa.261199." --out CubAlquila-Firmada.apk "$UNSIGNED_APK"
+        apksigner sign --ks "$JKS_FILE" --ks-pass "pass:Hisa.261199." --out CubAlquila.apk
 
     - name: Subir APK Generado a GitHub
       uses: actions/upload-artifact@v4
