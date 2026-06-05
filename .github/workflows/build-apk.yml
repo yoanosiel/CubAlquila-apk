@@ -21,36 +21,40 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Truco del Espejo - Duplicar JKS con el nombre esperado
+    - name: Configurar Llaves y Propiedades Nativas de Firma
       run: |
-        # Buscamos tu llave real en el proyecto
+        # 1. Encontrar tu llave física real en el proyecto
         REAL_KEY=$(find . -name "taxicuba-identity.jks" | head -n 1)
-        echo "Llave real encontrada en: $REAL_KEY"
+        echo "Llave real en: $REAL_KEY"
         
-        # Copiamos la llave a la raíz con el nombre exacto que Gradle está exigiendo rigurosamente
+        # 2. Crear las copias que Gradle necesita tanto en la raíz como en la carpeta app
         cp "$REAL_KEY" ./my-upload-key.jks
-        echo "Espejo creado exitosamente como ./my-upload-key.jks"
+        cp "$REAL_KEY" ./app/my-upload-key.jks
+        
+        # 3. Inyectar las contraseñas directamente en el archivo global de propiedades de Gradle
+        mkdir -p ~/.gradle
+        echo "RELEASE_STORE_PASSWORD=Hisa.261199." >> ~/.gradle/gradle.properties
+        echo "RELEASE_KEY_PASSWORD=Hisa.261199." >> ~/.gradle/gradle.properties
+        echo "RELEASE_STORE_FILE=my-upload-key.jks" >> ~/.gradle/gradle.properties
+        echo "RELEASE_KEY_ALIAS=taxicuba-identity" >> ~/.gradle/gradle.properties
 
     - name: Conceder permisos de ejecución a gradlew
       run: chmod +x ./gradlew
 
-    - name: Compilar APK (Modo Release Autorizado)
-      # Inyectamos de igual forma la contraseña real para el empaquetado interno de Gradle
-      run: |
-        ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.password="Hisa.261199." \
-          -Pandroid.injected.signing.key.alias="taxicuba-identity" \
-          -Pandroid.injected.signing.key.password="Hisa.261199."
+    - name: Compilar APK (Modo Release)
+      # Desactivamos el cache para asegurar una lectura limpia de las nuevas propiedades
+      run: ./gradlew assembleRelease --no-configuration-cache
 
     - name: Instalar apksigner en el servidor
       run: sudo apt-get update && sudo apt-get install -y apksigner
 
-    - name: Firmar APK con el nombre oficial
+    - name: Alinear y Sellar APK Final
       run: |
+        # Buscamos la APK generada por la compilación exitosa
         APK_PATH=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
-        echo "APK generado para firmar: $APK_PATH"
+        echo "APK base encontrada en: $APK_PATH"
         
-        # Sellamos de forma definitiva la APK con el nombre CubAlquila.apk
+        # Forzamos la firma final externa garantizando el nombre CubAlquila.apk
         apksigner sign --ks ./my-upload-key.jks --ks-pass pass:"Hisa.261199." --out CubAlquila.apk "$APK_PATH"
 
     - name: Subir APK Generado a GitHub
