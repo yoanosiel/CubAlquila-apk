@@ -12,10 +12,10 @@ jobs:
 
     steps:
     - name: Descargar Código del Repositorio
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Configurar Java JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -39,11 +39,11 @@ jobs:
         echo "APK encontrado: $APK_PATH"
         echo "Llave encontrada: $KEY_PATH"
         
-        # Firmamos el APK dejando el archivo definitivo listo
+        # Firmamos el APK con el nombre definitivo y limpio
         apksigner sign --ks "$KEY_PATH" --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} --out CubAlquila.apk "$APK_PATH"
 
     - name: Subir APK Generado a GitHub
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: CubAlquila-Descarga
         path: CubAlquila.apk
