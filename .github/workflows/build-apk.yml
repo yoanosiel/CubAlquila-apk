@@ -1,9 +1,10 @@
-name: Compilar y Firmar CubAlquila
+name: Compilar y Firmar APK
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -11,32 +12,20 @@ jobs:
 
     steps:
     - name: Descargar Código del Repositorio
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
 
     - name: Configurar Java JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v3
       with:
-        distribution: 'zulu'
         java-version: '17'
-        cache: 'gradle'
+        distribution: 'temurin'
+        cache: gradle
 
-    - name: Corregir sintaxis KSP y desactivar firma interna
-      run: |
-        # Reparamos cualquier comilla sobrante en KSP y apagamos la firma de Gradle para evitar bloqueos
-        if [ -f app/build.gradle.kts ]; then 
-          sed -i 's/"ksp"(/ksp(/g' app/build.gradle.kts
-          sed -i 's/signingConfig = signingConfigs.getByName("release")//g' app/build.gradle.kts
-        fi
-        if [ -f app/build.gradle ]; then 
-          sed -i 's/"ksp"(/ksp(/g' app/build.gradle
-          sed -i 's/signingConfig signingConfigs.release//g' app/build.gradle
-        fi
-
-    - name: Conceder Permisos a Gradle
+    - name: Conceder permisos de ejecución a gradlew
       run: chmod +x ./gradlew
 
     - name: Compilar APK (Modo Release)
-      run: ./gradlew assembleRelease --no-configuration-cache
+      run: ./gradlew assembleRelease
 
     - name: Instalar apksigner en el servidor
       run: sudo apt-get update && sudo apt-get install -y apksigner
@@ -44,17 +33,17 @@ jobs:
     - name: Firmar APK con llave JKS
       run: |
         # Buscamos el APK generado y tu llave
-        UNSIGNED_APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
-        JKS_FILE=$(find . -name "*.jks" | head -n 1)
+        APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+        KEY_PATH=$(find . -name "taxicuba-identity.jks" | head -n 1)
         
-        echo "✔ APK encontrado: $UNSIGNED_APK"
-        echo "✔ Llave encontrada: $JKS_FILE"
+        echo "APK encontrado: $APK_PATH"
+        echo "Llave encontrada: $KEY_PATH"
         
-        # Aplicamos la firma usando exactamente tu contraseña con el punto final
-        apksigner sign --ks "$JKS_FILE" --ks-pass "pass:Hisa.261199." --out CubAlquila.apk
+        # Firmamos el APK dejando el archivo definitivo listo
+        apksigner sign --ks "$KEY_PATH" --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} --out CubAlquila.apk "$APK_PATH"
 
     - name: Subir APK Generado a GitHub
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: CubAlquila-Descarga
-        path: CubAlquila-Firmada.apk
+        path: CubAlquila.apk
