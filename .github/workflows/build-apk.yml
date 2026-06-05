@@ -21,43 +21,51 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Ubicar Archivo JKS en Rutas Requeridas
+    - name: Configurar Llave y Descubrir Alias Real
       run: |
-        # Buscamos tu llave original en el proyecto
+        # 1. Buscar el archivo original
         REAL_KEY=$(find . -name "taxicuba-identity.jks" | head -n 1)
-        echo "Llave real encontrada en: $REAL_KEY"
         
-        # Copiamos la llave en la raíz principal
-        cp "$REAL_KEY" ./my-upload-key.jks
+        # 2. Crear una ruta ABSOLUTA para que Gradle no se pierda en sus carpetas internas
+        ABS_KEY_PATH="$(pwd)/my-upload-key.jks"
+        cp "$REAL_KEY" "$ABS_KEY_PATH"
         
-        # Copiamos la llave DENTRO de la carpeta app (Esta es la solución al error actual)
-        mkdir -p app
-        cp "$REAL_KEY" ./app/my-upload-key.jks
+        # 3. Leer mágicamente el archivo para extraer el Alias verdadero (ej. key0, upload, etc.)
+        REAL_ALIAS=$(keytool -list -v -keystore "$ABS_KEY_PATH" -storepass "Hisa.261199." | grep -iE "(Alias name|Nombre de alias)" | head -n 1 | cut -d':' -f2 | xargs)
         
-        echo "Espejos JKS creados correctamente en ./ y ./app/"
+        # Si por alguna razón está vacío, usamos 'key0' que es el estándar de Android
+        if [ -z "$REAL_ALIAS" ]; then
+          REAL_ALIAS="key0"
+        fi
+        
+        echo "¡Alias interno descubierto!: '$REAL_ALIAS'"
+        
+        # Guardamos estas variables en el entorno de GitHub para los siguientes pasos
+        echo "KEY_PATH=$ABS_KEY_PATH" >> $GITHUB_ENV
+        echo "KEY_ALIAS=$REAL_ALIAS" >> $GITHUB_ENV
 
     - name: Conceder permisos de ejecución a gradlew
       run: chmod +x ./gradlew
 
     - name: Compilar APK (Modo Release)
-      # Pasamos los parámetros vinculando directamente el archivo de la carpeta app
+      # Ahora inyectamos la ruta absoluta y el alias que acabamos de descubrir
       run: |
         ./gradlew assembleRelease --no-configuration-cache \
-          -Pandroid.injected.signing.store.file="my-upload-key.jks" \
+          -Pandroid.injected.signing.store.file="${{ env.KEY_PATH }}" \
           -Pandroid.injected.signing.store.password="Hisa.261199." \
-          -Pandroid.injected.signing.key.alias="taxicuba-identity" \
+          -Pandroid.injected.signing.key.alias="${{ env.KEY_ALIAS }}" \
           -Pandroid.injected.signing.key.password="Hisa.261199."
 
     - name: Instalar apksigner en el servidor
       run: sudo apt-get update && sudo apt-get install -y apksigner
 
-    - name: Firmar y Renombrar APK Final
+    - name: Sellar y Renombrar APK a CubAlquila
       run: |
         APK_PATH=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
-        echo "APK base encontrada: $APK_PATH"
+        echo "APK lista para firmar: $APK_PATH"
         
-        # Sello externo usando la llave y asignando el nombre limpio CubAlquila
-        apksigner sign --ks ./my-upload-key.jks --ks-pass pass:"Hisa.261199." --out CubAlquila.apk "$APK_PATH"
+        # Usamos el mismo alias exacto para sellarla al final con su nombre correcto
+        apksigner sign --ks "${{ env.KEY_PATH }}" --ks-pass pass:"Hisa.261199." --ks-key-alias "${{ env.KEY_ALIAS }}" --out CubAlquila.apk "$APK_PATH"
 
     - name: Subir APK Generado a GitHub
       uses: actions/upload-artifact@v4
