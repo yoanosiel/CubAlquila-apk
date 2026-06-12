@@ -15,6 +15,12 @@ import com.example.ui.viewmodel.RentalViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        if (auth.currentUser == null) {
+            startActivity(android.content.Intent(this, LoginActivity::class.java))
+            finish()
+            return
+        }
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
