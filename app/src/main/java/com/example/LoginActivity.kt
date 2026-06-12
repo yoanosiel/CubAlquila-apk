@@ -30,7 +30,7 @@ class LoginActivity : Activity() {
                     .addOnCompleteListener(this) { task ->
                         if (task.isSuccessful) {
                             Toast.makeText(this, "¡Autenticación exitosa!", Toast.LENGTH_SHORT).show()
-                            # Navegar al tablón principal y cerrar el login
+                            // Navegar al tablón principal y cerrar el login
                             startActivity(Intent(this, MainActivity::class.java))
                             finish()
                         } else {
