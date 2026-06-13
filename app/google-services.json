@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "400715347620-l7kk5abfbps7s4m25mobb9ifv0hmjgu7.apps.googleusercontent.com",
+          "client_id": "400715347620-ctkobq0hn5otofju57ro3fkoq3ncepdv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.aistudio.alquilerescuba.krtnvh",
-            "certificate_hash": "edf19403044992e51722305e766521f9bb8dc87a"
+            "certificate_hash": "edf19403d44992e51722305e766521f9bb8dc87a"
           }
         },
         {
