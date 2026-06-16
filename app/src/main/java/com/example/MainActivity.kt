@@ -1,5 +1,4 @@
 package com.example
-import com.google.firebase.FirebaseFirestore.getInstance().FirebaseFirestore
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,9 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-// Imports de Firebase modernos para Kotlin
-import com.google.firebase.Firebase
-import com.google.firebase.FirebaseFirestore.getInstance().firestore
+// Importación tradicional y a prueba de fallos
+import com.google.firebase.firestore.FirebaseFirestore
 
 // 1. Tu estructura simple para la oferta
 data class Oferta(
@@ -22,7 +20,7 @@ data class Oferta(
     val fecha: Long = System.currentTimeMillis()
 )
 
-// 2. La clase Principal OBLIGATORIA para que Android muestre la pantalla
+// 2. La clase Principal
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,10 +53,10 @@ fun PantallaTablon() {
     }
 }
 
-// 4. Tu función directa para publicar (sin revisar autenticación)
+// 4. Tu función directa para publicar
 fun publicarOfertaDirecto(titulo: String, descripcion: String, precio: String, contacto: String) {
-    // Instancia de la base de datos usando el estándar actual de Kotlin
-    val db = Firebase.firestore
+    // Usamos getInstance() que no depende de extensiones
+    val db = FirebaseFirestore.getInstance()
     val nuevaOferta = Oferta(titulo, descripcion, precio, contacto)
 
     db.collection("ofertas")
@@ -70,9 +68,3 @@ fun publicarOfertaDirecto(titulo: String, descripcion: String, precio: String, c
             println("Error al publicar: $e")
         }
 }
-
-
-
-
-
-
