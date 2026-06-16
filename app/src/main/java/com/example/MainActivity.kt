@@ -15,19 +15,17 @@ import com.example.ui.viewmodel.RentalViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-        if (auth.currentUser == null) {
-            startActivity(android.content.Intent(this, LoginActivity::class.java))
-            finish()
-            return
-        }
+        
+        // Modo Libre: Entrar directo a la App sin pasar por Login
         enableEdgeToEdge()
+        
         setContent {
             MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.background
                 ) {
+                    // Inicializa tu ViewModel e interfaz original de CubAlquila
                     val viewModel: RentalViewModel = viewModel()
                     MainScreen(viewModel = viewModel)
                 }
