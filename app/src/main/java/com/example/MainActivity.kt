@@ -8,7 +8,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.google.firebase.firestore.FirebaseFirestore
+// Imports de Firebase modernos para Kotlin
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 
 // 1. Tu estructura simple para la oferta
 data class Oferta(
@@ -54,7 +56,8 @@ fun PantallaTablon() {
 
 // 4. Tu función directa para publicar (sin revisar autenticación)
 fun publicarOfertaDirecto(titulo: String, descripcion: String, precio: String, contacto: String) {
-    val db = FirebaseFirestore.getInstance()
+    // Instancia de la base de datos usando el estándar actual de Kotlin
+    val db = Firebase.firestore
     val nuevaOferta = Oferta(titulo, descripcion, precio, contacto)
 
     db.collection("ofertas")
@@ -66,3 +69,9 @@ fun publicarOfertaDirecto(titulo: String, descripcion: String, precio: String, c
             println("Error al publicar: $e")
         }
 }
+
+
+
+
+
+
