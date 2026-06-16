@@ -124,3 +124,7 @@ dependencies {
   ksp(libs.androidx.room.compiler)
   ksp(libs.moshi.kotlin.codegen)
 }
+
+dependencies {
+    implementation("com.google.firebase:firebase-firestore-ktx:25.0.0")
+}

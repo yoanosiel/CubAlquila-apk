@@ -8,10 +8,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-// Importación tradicional y a prueba de fallos
 import com.google.firebase.firestore.FirebaseFirestore
 
-// 1. Tu estructura simple para la oferta
+// 1. Estructura simple para la oferta
 data class Oferta(
     val titulo: String = "",
     val descripcion: String = "",
@@ -20,7 +19,7 @@ data class Oferta(
     val fecha: Long = System.currentTimeMillis()
 )
 
-// 2. La clase Principal
+// 2. Clase Principal para mostrar la pantalla
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +36,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// 3. Un diseño visual básico para arrancar
+// 3. Diseño visual básico Modo Libre
 @Composable
 fun PantallaTablon() {
     Column(modifier = Modifier.padding(16.dp)) {
@@ -53,9 +52,8 @@ fun PantallaTablon() {
     }
 }
 
-// 4. Tu función directa para publicar
+// 4. Función directa para publicar en Firestore
 fun publicarOfertaDirecto(titulo: String, descripcion: String, precio: String, contacto: String) {
-    // Usamos getInstance() que no depende de extensiones
     val db = FirebaseFirestore.getInstance()
     val nuevaOferta = Oferta(titulo, descripcion, precio, contacto)
 
