@@ -99,35 +99,70 @@ object SharedSyncService {
                                                                                                                                   * If failed, returns null.
                                                                                                                                        */
                                                                                                                                            fun uploadImage(imageBytes: ByteArray): String? {
-                                                                                                                                                        val imageBody = imageBytes.toRequestBody("image/jpeg".toMediaType())
-                                                                                                                                                                val requestBody = MultipartBody.Builder()
-                                                                                                                                                                            .setType(MultipartBody.FORM)
-                                                                                                                                                                                        .addFormDataPart("reqtype", "fileupload")
-                                                                                                                                                                                                    .addFormDataPart("fileToUpload", "image.jpg", imageBody)
-                                                                                                                                                                                                                .build()
+        // 1. INTENTO CON CATBOX (Con User-Agent real para evadir protecciones antibot de Cloudflare)
+        try {
+            val imageBody = imageBytes.toRequestBody("image/jpeg".toMediaType())
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("reqtype", "fileupload")
+                .addFormDataPart("fileToUpload", "image.jpg", imageBody)
+                .build()
 
-                                                                                                                                                                                                                        val request = Request.Builder()
-                                                                                                                                                                                                                                    .url("https://catbox.moe/user/api.php")
-                                                                                                                                                                                                                                                .post(requestBody)
-                                                                                                                                                                                                                                                            .build()
+            val request = Request.Builder()
+                .url("https://catbox.moe/user/api.php")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .post(requestBody)
+                .build()
 
-                                                                                                                                                                                                                                                                    try {
-                                                                                                                                                                                                                                                                                    client.newCall(request).execute().use { response ->
-                                                                                                                                                                                                                                                                                                    if (!response.isSuccessful) {
-                                                                                                                                                                                                                                                                                                                            Log.e(TAG, "Error uploading image to Catbox: ${response.code} ${response.message}")
-                                                                                                                                                                                                                                                                                                                                                return null
-                                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                                                                    val responseBodyStr = response.body?.string()?.trim()
-                                                                                                                                                                                                                                                                                                                                    if (responseBodyStr.isNullOrBlank() || !responseBodyStr.startsWith("http")) {
-                                                                                                                                                                                                                                                                                                                                                            Log.e(TAG, "Invalid response from Catbox: $responseBodyStr")
-                                                                                                                                                                                                                                                                                                                                                                                return null
-                                                                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                                                                                                    Log.d(TAG, "Successfully uploaded image to Catbox: $responseBodyStr")
-                                                                                                                                                                                                                                                                                                                                                                    return responseBodyStr
-                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                    } catch (e: Exception) {
-                                                                                                                                                                                                                                                                                    Log.e(TAG, "Exception during image upload to Catbox: ${e.message}", e)
-    return null
-                                                                                                                                                                                                                                                                    }
-                                                                                                                                           }
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val resStr = response.body?.string()?.trim()
+                    if (!resStr.isNullOrBlank() && resStr.startsWith("http")) {
+                        Log.d(TAG, "Successfully uploaded image to Catbox: $resStr")
+                        return resStr
+                    }
+                }
+                Log.e(TAG, "Catbox failed or returned unsuccessful code, trying fallback...")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Catbox exception: ${e.message}, trying fallback...")
+        }
+
+        // 2. PLAN B: INTENTO CON TELEGRA.PH (Plataforma de Telegram, libre de bloqueos en Cuba)
+        try {
+            val imageBody = imageBytes.toRequestBody("image/jpeg".toMediaType())
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", "image.jpg", imageBody)
+                .build()
+
+            val request = Request.Builder()
+                .url("https://telegra.ph/upload")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val resStr = response.body?.string()?.trim()
+                    if (!resStr.isNullOrBlank() && resStr.contains("file")) {
+                        val fileIdx = resStr.indexOf("file")
+                        val quoteIdx = resStr.indexOf("\"", fileIdx)
+                        if (fileIdx != -1 && quoteIdx != -1) {
+                            val rawPath = resStr.substring(fileIdx, quoteIdx)
+                            val cleanPath = rawPath.replace("\\/", "/")
+                            val fullUrl = "https://telegra.ph/" + cleanPath
+                            Log.d(TAG, "Successfully uploaded image to Telegra.ph: $fullUrl")
+                            return fullUrl
+                        }
+                    }
+                }
+                Log.e(TAG, "Telegra.ph upload failed")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Telegra.ph exception: ${e.message}")
+        }
+
+        return null
+    }
 }
