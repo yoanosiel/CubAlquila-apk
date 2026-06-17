@@ -1,5 +1,4 @@
 package com.example.data.repository
-import android.widget.Toast
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 
@@ -62,7 +61,6 @@ object SharedSyncService {
                                                                                                                                                                             Log.e(TAG, "Exception during fetch from cloud sync: ${e.message}", e)
                                                                                                                                                                                     try {
                                                                                                                                                                                                     android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                                                                                                                                                                                                        Toast.makeText(context, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
                                                                                                                                                                                                     }
                                                                                                                                                                                     } catch(t: Exception) {}
                                                                                                                                                                                                 return emptyList()
