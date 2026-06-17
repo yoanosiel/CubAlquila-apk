@@ -1,4 +1,7 @@
 package com.example.data.repository
+import android.widget.Toast
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 import android.util.Log
 import com.example.data.model.RentalListing
@@ -57,6 +60,11 @@ object SharedSyncService {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception during fetch from cloud sync: ${e.message}", e)
+        try {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        } catch(t: Exception) {}
             return emptyList()
         }
     }
@@ -84,6 +92,11 @@ object SharedSyncService {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception during upload to cloud sync: ${e.message}", e)
+        try {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        } catch(t: Exception) {}
             return false
         }
     }
@@ -121,6 +134,11 @@ object SharedSyncService {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception during image upload to Catbox: ${e.message}", e)
+        try {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        } catch(t: Exception) {}
             return null
         }
     }
