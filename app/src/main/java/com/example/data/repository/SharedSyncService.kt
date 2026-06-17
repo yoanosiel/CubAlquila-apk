@@ -18,7 +18,7 @@ object SharedSyncService {
             private const val TAG = "SharedSyncService"
                 
                     // Completely free-to-use, high performance, and unlimited public HTTPS key-value storage bucket
-                        private const val BASE_URL = "https://kvdb.io/AlquileresCubaAppletDB_2026_qmpwzx/listings_v2_v2"
+                        private const val BASE_URL = "https://kvdb.io/WX5bfrTwcw2morZFDF4AMK/listings_v2_v2"
 
                             private val client = OkHttpClient.Builder()
                                     .connectTimeout(15, TimeUnit.SECONDS)
