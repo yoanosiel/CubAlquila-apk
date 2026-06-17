@@ -127,7 +127,7 @@ class RentalViewModel(application: Application) : AndroidViewModel(application) 
             allListings,
             filterFlow1,
             filterFlow2
-        ) { listings, f1, f2 ->
+        ) { listings_v2, f1, f2 ->
             val query = f1.query
             val category = f1.category
             val prov = f1.province
@@ -137,7 +137,7 @@ class RentalViewModel(application: Application) : AndroidViewModel(application) 
             val nearMe = f2.onlyNearMe
             val sort = f2.sortBy
 
-            var result = listings
+            var result = listings_v2
 
             // 1. Category Filter
             if (category != "Todos") {
@@ -155,7 +155,7 @@ class RentalViewModel(application: Application) : AndroidViewModel(application) 
 
             // 3. Location filter - either specific drop-downs OR "near me" locator
             if (nearMe) {
-                // Filter specifically by active simulated location profile's province to ensure they see nearby listings
+                // Filter specifically by active simulated location profile's province to ensure they see nearby listings_v2
                 result = result.filter {
                     it.province.equals(currentLoc.province, ignoreCase = true)
                 }

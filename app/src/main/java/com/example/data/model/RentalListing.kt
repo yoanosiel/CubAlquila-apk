@@ -3,7 +3,7 @@ package com.example.data.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "rental_listings")
+@Entity(tableName = "rental_listings_v2")
 data class RentalListing(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val category: String, // "Casa", "Garaje", "Carro", "Otros"
