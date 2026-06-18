@@ -83,5 +83,15 @@ class SharedSyncService {
                 return@withContext false
             }
         }
+    
+        suspend fun deleteSharedListing(uuid: String): Boolean = withContext(Dispatchers.IO) {
+            try {
+                db.collection("anuncios").document(uuid).delete().await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
     }
 }
