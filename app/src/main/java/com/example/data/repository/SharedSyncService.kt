@@ -1,168 +1,106 @@
 package com.example.data.repository
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 
-import android.util.Log
-import com.example.data.model.RentalListing
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import okhttp3.MediaType.Companion.toMediaType
+import android.content.Context
+import android.net.Uri
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.concurrent.TimeUnit
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
-object SharedSyncService {
-            private const val TAG = "SharedSyncService"
-                
-                    // Completely free-to-use, high performance, and unlimited public HTTPS key-value storage bucket
-                        private const val BASE_URL = "https://kvdb.io/WX5bfrTwcw2morZFDF4AMK/listings_v2_v2"
+class SharedSyncService(private val context: Context) {
 
-                            private val client = OkHttpClient.Builder()
-                                    .connectTimeout(15, TimeUnit.SECONDS)
-                                            .readTimeout(15, TimeUnit.SECONDS)
-                                                    .build()
+    private val db = FirebaseFirestore.getInstance()
+    private val client = OkHttpClient()
 
-                                                        private val moshi = Moshi.Builder()
-                                                                .add(KotlinJsonAdapterFactory())
-                                                                        .build()
-
-                                                                            private val listType = Types.newParameterizedType(List::class.java, RentalListing::class.java)
-                                                                                private val jsonAdapter = moshi.adapter<List<RentalListing>>(listType)
-
-                                                                                    /**
-                                                                                         * Fetches listings_v2 from the shared cloud database.
-                                                                                              */
-                                                                                                  fun fetchSharedListings(): List<RentalListing> {
-                                                                                                                val request = Request.Builder()
-                                                                                                                            .url(BASE_URL)
-                                                                                                                                        .get()
-                                                                                                                                                    .build()
-
-                                                                                                                                                            try {
-                                                                                                                                                                            client.newCall(request).execute().use { response ->
-                                                                                                                                                                                            if (response.code == 404) {
-                                                                                                                                                                                                                    Log.d(TAG, "First-time fetch (404). Cloud database is currently empty.")
-                                                                                                                                                                                                                                        return emptyList()
-                                                                                                                                                                                            }
-                                                                                                                                                                                                            if (!response.isSuccessful) {
-                                                                                                                                                                                                                                    Log.e(TAG, "Error fetching listings_v2: ${response.code} ${response.message}")
-                                                                                                                                                                                                                                                        return emptyList()
-                                                                                                                                                                                                            }
-                                                                                                                                                                                                                            val bodyString = response.body?.string() ?: return emptyList()
-                                                                                                                                                                                                                                            if (bodyString.isBlank() || bodyString == "null") {
-                                                                                                                                                                                                                                                                    return emptyList()
-                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                            return jsonAdapter.fromJson(bodyString) ?: emptyList()
-                                                                                                                                                                            }
-                                                                                                                                                            } catch (e: Exception) {
-                                                                                                                                                                            Log.e(TAG, "Exception during fetch from cloud sync: ${e.message}", e)
-                                                                                                                                                                                    try {
-                                                                                                                                                                                                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                                                                                                                                                                                    }
-                                                                                                                                                                                    } catch(t: Exception) {}
-                                                                                                                                                                                                return emptyList()
-                                                                                                                                                            }
-                                                                                                  }
-
-                                                                                                      /**
-                                                                                                           * Uploads the full updated listings_v2 to the shared cloud database.
-                                                                                                                */
-                                                                                                                    fun uploadSharedListings(listings_v2: List<RentalListing>): Boolean {
-                                                                                                                                val json = jsonAdapter.toJson(listings_v2)
-                                                                                                                                        val mediaType = "application/json; charset=utf-8".toMediaType()
-                                                                                                                                                val body = json.toRequestBody(mediaType)
-
-                                                                                                                                                        val request = Request.Builder()
-                                                                                                                                                                    .url(BASE_URL)
-                                                                                                                                                                                .post(body)
-                                                                                                                                                                                            .build()
-
-                                                                                                                                                                                                    try {
-                                                                                                                                                                                                                    client.newCall(request).execute().use { response ->
-                                                                                                                                                                                                                                    if (!response.isSuccessful) {
-                                                                                                                                                                                                                                                            Log.e(TAG, "Error uploading listings_v2: ${response.code} ${response.message}")
-                                                                                                                                                                                                                                                                                return false
-                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                    return true
-                                                                                                                                                                                                                    }
-                                                                                                                                                                                                    } catch (e: Exception) {
-                                                                                                                                                                                                                    Log.e(TAG, "Exception during upload to cloud sync: ${e.message}", e)
-    return false
-                                                                                                                                                                                                    }
-                                                                                                                    }
-
-                                                                                                                        /**
-                                                                                                                             * Uploads an image byte array to Catbox and returns the public web URL.
-                                                                                                                                  * If failed, returns null.
-                                                                                                                                       */
-                                                                                                                                           fun uploadImage(imageBytes: ByteArray): String? {
-        // 1. INTENTO CON CATBOX (Con User-Agent real para evadir protecciones antibot de Cloudflare)
+    // 1. FUNCIÓN PARA SUBIR LA IMAGEN GRATIS A CATBOX Y OBTENER LA URL
+    suspend fun uploadImageToFreeHost(imageUri: Uri): String? = withContext(Dispatchers.IO) {
         try {
-            val imageBody = imageBytes.toRequestBody("image/jpeg".toMediaType())
+            // Crear un archivo temporal con los bytes de la imagen seleccionada
+             // Procesando archivo 
+            val file = File(context.cacheDir, "temp_upload_image.jpg")
+            context.contentResolver.openInputStream(imageUri)?.use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // Preparar el cuerpo de la petición Multipart exigida por Catbox
             val requestBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("reqtype", "fileupload")
-                .addFormDataPart("fileToUpload", "image.jpg", imageBody)
+                .addFormDataPart(
+                    "fileToUpload", 
+                    file.name, 
+                    file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                )
                 .build()
 
             val request = Request.Builder()
                 .url("https://catbox.moe/user/api.php")
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 .post(requestBody)
                 .build()
 
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    val resStr = response.body?.string()?.trim()
-                    if (!resStr.isNullOrBlank() && resStr.startsWith("http")) {
-                        Log.d(TAG, "Successfully uploaded image to Catbox: $resStr")
-                        return resStr
-                    }
+                    val imageUrl = response.body?.string()?.trim()
+                    // Eliminamos el archivo temporal del teléfono
+                    if (file.exists()) file.delete()
+                    return@withContext imageUrl // Devuelve la URL directa de la foto
                 }
-                Log.e(TAG, "Catbox failed or returned unsuccessful code, trying fallback...")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Catbox exception: ${e.message}, trying fallback...")
+            e.printStackTrace()
         }
+        return@withContext null
+    }
 
-        // 2. PLAN B: INTENTO CON TELEGRA.PH (Plataforma de Telegram, libre de bloqueos en Cuba)
+    // 2. FUNCIÓN PARA GUARDAR EL ANUNCIO EN CLOUD FIRESTORE (TOTALMENTE GRATIS)
+    suspend fun saveListingToFirestore(
+        title: String, 
+        price: String, 
+        description: String, 
+        phone: String, 
+        province: String,
+        imageUri: Uri?
+    ): Boolean = withContext(Dispatchers.IO) {
         try {
-            val imageBody = imageBytes.toRequestBody("image/jpeg".toMediaType())
-            val requestBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("file", "image.jpg", imageBody)
-                .build()
+            var finalImageUrl = ""
 
-            val request = Request.Builder()
-                .url("https://telegra.ph/upload")
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                .post(requestBody)
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val resStr = response.body?.string()?.trim()
-                    if (!resStr.isNullOrBlank() && resStr.contains("file")) {
-                        val fileIdx = resStr.indexOf("file")
-                        val quoteIdx = resStr.indexOf("\"", fileIdx)
-                        if (fileIdx != -1 && quoteIdx != -1) {
-                            val rawPath = resStr.substring(fileIdx, quoteIdx)
-                            val cleanPath = rawPath.replace("\\/", "/")
-                            val fullUrl = "https://telegra.ph/" + cleanPath
-                            Log.d(TAG, "Successfully uploaded image to Telegra.ph: $fullUrl")
-                            return fullUrl
-                        }
-                    }
+            // Si el usuario seleccionó una foto, primero la subimos al hosting gratuito
+            if (imageUri != null) {
+                val uploadedUrl = uploadImageToFreeHost(imageUri)
+                if (uploadedUrl != None && uploadedUrl!!.startsWith("http")) {
+                    finalImageUrl = uploadedUrl
                 }
-                Log.e(TAG, "Telegra.ph upload failed")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Telegra.ph exception: ${e.message}")
-        }
 
-        return null
+            // Estructuramos el anuncio para Firestore
+            val listingData = hashMapOf(
+                "title" to title,
+                "price" to price,
+                "description" to description,
+                "phone" to phone,
+                "province" to province,
+                "imageUrl" to finalImageUrl,
+                "timestamp" to System.currentTimeMillis()
+            )
+
+            // Guardamos el documento de texto puro en la colección "anuncios"
+            db.collection("anuncios")
+                .add(listingData)
+                .await() // Espera de forma segura a que Firebase confirme el guardado
+                
+            return@withContext true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext false
+        }
     }
 }
