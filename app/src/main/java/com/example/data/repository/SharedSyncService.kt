@@ -16,36 +16,51 @@ class SharedSyncService {
         private val db = FirebaseFirestore.getInstance()
         private val client = OkHttpClient()
 
-        // 1. ATIENDE A MAINSCREEN: Sube los bytes comprimidos directamente a Catbox de forma gratuita
+        // Sube las imágenes al Supergrupo privado de Telegram de forma gratuita y anónima
         suspend fun uploadImage(byteArray: ByteArray): String? = withContext(Dispatchers.IO) {
+            val botToken = "8645688069:AAFvDt3ElYenUQOAyrVgXyszjGQKjQ6yljY"
+            val chatId = "-1004371836968"
             try {
                 val requestBody = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
-                    .addFormDataPart("reqtype", "fileupload")
+                    .addFormDataPart("chat_id", chatId)
                     .addFormDataPart(
-                        "fileToUpload", 
-                        "image.jpg", 
+                        "photo", 
+                        "imagen_alquiler.jpg", 
                         byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
                     )
                     .build()
 
-                val request = Request.Builder()
-                    .url("https://catbox.moe/user/api.php")
+                val request1 = Request.Builder()
+                    .url("https://api.telegram.org/bot$botToken/sendPhoto")
                     .post(requestBody)
                     .build()
 
-                client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        return@withContext response.body?.string()?.trim()
-                    }
-                }
+                val response1 = client.newCall(request1).execute()
+                val json1 = org.json.JSONObject(response1.body?.string() ?: "")
+                if (!json1.optBoolean("ok", false)) return@withContext null
+
+                val photoArray = json1.getJSONObject("result").getJSONArray("photo")
+                val fileId = photoArray.getJSONObject(photoArray.length() - 1).getString("file_id")
+
+                val request2 = Request.Builder()
+                    .url("https://api.telegram.org/bot$botToken/getFile?file_id=$fileId")
+                    .get()
+                    .build()
+
+                val response2 = client.newCall(request2).execute()
+                val json2 = org.json.JSONObject(response2.body?.string() ?: "")
+                if (!json2.optBoolean("ok", false)) return@withContext null
+
+                val filePath = json2.getJSONObject("result").getString("file_path")
+
+                return@withContext "https://api.telegram.org/file/bot$botToken/$filePath"
             } catch (e: Exception) {
                 e.printStackTrace()
             }
             return@withContext null
         }
 
-        // 2. ATIENDE A RENTALREPOSITORY: Descarga todos los anuncios de Cloud Firestore
         suspend fun fetchSharedListings(): List<RentalListing> = withContext(Dispatchers.IO) {
             try {
                 val snapshot = db.collection("anuncios").get().await()
@@ -56,7 +71,6 @@ class SharedSyncService {
             }
         }
 
-        // 3. ATIENDE A RENTALREPOSITORY: Sube o actualiza la lista de anuncios en Cloud Firestore
         suspend fun uploadSharedListings(listings: List<RentalListing>): Boolean = withContext(Dispatchers.IO) {
             try {
                 for (item in listings) {
