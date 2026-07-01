@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:400715347620:android:8e427d7fe63880d9dc5831",
         "android_client_info": {
-          "package_name": "com.aistudio.alquilerescuba.krtnvh"
+          "package_name": "com.cubalquila.app"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "400715347620-ctkobq0hn5otofju57ro3fkoq3ncepdv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.aistudio.alquilerescuba.krtnvh",
+            "package_name": "com.cubalquila.app",
             "certificate_hash": "edf19403d44992e51722305e766521f9bb8dc87a"
           }
         },
