@@ -17,49 +17,35 @@ class SharedSyncService {
         private val client = OkHttpClient()
 
         // Sube las imágenes al Supergrupo privado de Telegram de forma gratuita y anónima
-        suspend fun uploadImage(byteArray: ByteArray): String? = withContext(Dispatchers.IO) {
-            val botToken = "8645688069:AAFvDt3ElYenUQOAyrVgXyszjGQKjQ6yljY"
-            val chatId = "-1004371836968"
-            try {
-                val requestBody = MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart("chat_id", chatId)
-                    .addFormDataPart(
-                        "photo", 
-                        "imagen_alquiler.jpg", 
-                        byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
-                    )
-                    .build()
+        suspend fun uploadImage(imageBytes: ByteArray): String? {
+    val client = okhttp3.OkHttpClient()
+    val imageBody = okhttp3.RequestBody.create(okhttp3.MediaType.parse("image/jpeg"), imageBytes)
+    val requestBody = okhttp3.MultipartBody.Builder()
+        .setType(okhttp3.MultipartBody.FORM)
+        .addFormDataPart("file", "image.jpg", imageBody)
+        .addFormDataPart("upload_preset", "dsjpuc7j")
+        .build()
 
-                val request1 = Request.Builder()
-                    .url("https://api.telegram.org/bot$botToken/sendPhoto")
-                    .post(requestBody)
-                    .build()
+    val request = okhttp3.Request.Builder()
+        .url("https://api.cloudinary.com/v1_1/mdmhprpj/image/upload")
+        .post(requestBody)
+        .build()
 
-                val response1 = client.newCall(request1).execute()
-                val json1 = org.json.JSONObject(response1.body?.string() ?: "")
-                if (!json1.optBoolean("ok", false)) return@withContext null
-
-                val photoArray = json1.getJSONObject("result").getJSONArray("photo")
-                val fileId = photoArray.getJSONObject(photoArray.length() - 1).getString("file_id")
-
-                val request2 = Request.Builder()
-                    .url("https://api.telegram.org/bot$botToken/getFile?file_id=$fileId")
-                    .get()
-                    .build()
-
-                val response2 = client.newCall(request2).execute()
-                val json2 = org.json.JSONObject(response2.body?.string() ?: "")
-                if (!json2.optBoolean("ok", false)) return@withContext null
-
-                val filePath = json2.getJSONObject("result").getString("file_path")
-
-                return@withContext "https://api.telegram.org/file/bot$botToken/$filePath"
-            } catch (e: Exception) {
-                e.printStackTrace()
+    return try {
+        client.newCall(request).execute().use { response ->
+            val bodyStr = response.body?.string()
+            if (response.isSuccessful && bodyStr != null) {
+                // Extraemos la URL segura (HTTPS) de la respuesta de Cloudinary
+                val match = "\"secure_url\":\"([^"]+)\"".toRegex().find(bodyStr)
+                match?.groups?.get(1)?.value
+            } else {
+                null
             }
-            return@withContext null
         }
+    } catch (e: Exception) {
+        null
+    }
+}
 
         suspend fun fetchSharedListings(): List<RentalListing> = withContext(Dispatchers.IO) {
             try {
