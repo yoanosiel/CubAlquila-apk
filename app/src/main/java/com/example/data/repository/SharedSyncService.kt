@@ -1,3 +1,4 @@
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 package com.example.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,7 +20,7 @@ class SharedSyncService {
         // Sube las imágenes al Supergrupo privado de Telegram de forma gratuita y anónima
         suspend fun uploadImage(imageBytes: ByteArray): String? {
     val client = okhttp3.OkHttpClient()
-    val imageBody = okhttp3.RequestBody.create(okhttp3.MediaType.parse("image/jpeg"), imageBytes)
+    val imageBody = okhttp3.RequestBody.create(okhttp3."image/jpeg"), imageBytes.toMediaTypeOrNull()
     val requestBody = okhttp3.MultipartBody.Builder()
         .setType(okhttp3.MultipartBody.FORM)
         .addFormDataPart("file", "image.jpg", imageBody)
