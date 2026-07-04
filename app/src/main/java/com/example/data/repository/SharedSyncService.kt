@@ -35,9 +35,9 @@ class SharedSyncService {
         client.newCall(request).execute().use { response ->
             val bodyStr = response.body?.string()
             if (response.isSuccessful && bodyStr != null) {
-                // Extraemos la URL segura (HTTPS) de la respuesta de Cloudinary
-                val match = "\"secure_url\":\"([^"]+)\"".toRegex().find(bodyStr)
-                match?.groups?.get(1)?.value
+                // Usamos substring para cortar el texto de forma segura y evitar errores de compilador
+                val url = bodyStr.substringAfter("\"secure_url\":\"").substringBefore("\"")
+                if (url != bodyStr) url else null
             } else {
                 null
             }
