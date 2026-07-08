@@ -20,7 +20,7 @@ class SharedSyncService {
         // Sube las imágenes al Supergrupo privado de Telegram de forma gratuita y anónima
         suspend fun uploadImage(imageBytes: ByteArray): String? {
     val client = okhttp3.OkHttpClient()
-    val imageBody = okhttp3.RequestBody.create(okhttp3."image/jpeg".toMediaTypeOrNull(), imageBytes)
+    val imageBody = RequestBody.create("image/jpeg".toMediaTypeOrNull(), imageBytes)
     val requestBody = okhttp3.MultipartBody.Builder()
         .setType(okhttp3.MultipartBody.FORM)
         .addFormDataPart("file", "image.jpg", imageBody)
