@@ -50,14 +50,28 @@ class SharedSyncService {
 }
 
         suspend fun fetchSharedListings(): List<RentalListing> = withContext(Dispatchers.IO) {
+    try {
+        val snapshot = db.collection("anuncios").get().await()
+        val listaValida = mutableListOf<RentalListing>()
+        
+        for (document in snapshot.documents) {
             try {
-                val snapshot = db.collection("anuncios").get().await()
-                return@withContext snapshot.toObjects(RentalListing::class.java)
+                val item = document.toObject(RentalListing::class.java)
+                if (item != null) {
+                    listaValida.add(item)
+                }
             } catch (e: Exception) {
+                // Ignoramos el anuncio corrupto para que no rompa la app
                 e.printStackTrace()
-                return@withContext emptyList<RentalListing>()
             }
         }
+        
+        return@withContext listaValida
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return@withContext emptyList<RentalListing>()
+    }
+}
 
         suspend fun uploadSharedListings(listings: List<RentalListing>): Boolean = withContext(Dispatchers.IO) {
             try {
