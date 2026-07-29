@@ -4,52 +4,22 @@ import android.util.Log
 import com.example.data.model.RentalListing
 import com.parse.ParseObject
 import com.parse.ParseQuery
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object SharedSyncService {
     private const val TAG = "SharedSyncService"
     private const val CLASS_NAME = "RentalListing"
 
-    fun publishListing(listing: RentalListing, onResult: (Boolean) -> Unit) {
-        val parseObject = ParseObject(CLASS_NAME).apply {
-            put("category", listing.category)
-            put("title", listing.title)
-            put("description", listing.description)
-            put("price", listing.price)
-            put("currency", listing.currency)
-            put("province", listing.province)
-            put("municipality", listing.municipality)
-            put("exactAddress", listing.exactAddress)
-            put("contactPhone", listing.contactPhone)
-            put("contactWhatsApp", listing.contactWhatsApp)
-            put("contactEmail", listing.contactEmail)
-            put("imageUrl", listing.imageUrl)
-            put("isFavorite", listing.isFavorite)
-            put("isUserCreated", listing.isUserCreated)
-            put("uuid", listing.uuid)
-            put("publishDate", listing.publishDate)
-            put("pricePeriod", listing.pricePeriod)
-        }
-
-        parseObject.saveInBackground { e ->
-            if (e == null) {
-                Log.d(TAG, "Anuncio publicado exitosamente en Back4App")
-                onResult(true)
-            } else {
-                Log.e(TAG, "Error al publicar en Back4App: ${e.message}", e)
-                onResult(false)
-            }
-        }
-    }
-
-    fun fetchSharedListings(onResult: (List<RentalListing>) -> Unit) {
-        val query = ParseQuery.getQuery<ParseObject>(CLASS_NAME)
-        query.orderByDescending("createdAt")
-        query.findInBackground { objects, e ->
-            if (e == null && objects != null) {
-                val resultList = mutableListOf<RentalListing>()
-                for (obj in objects) {
-                    try {
-                        val listing = RentalListing(
+    suspend fun fetchSharedListings(): List<RentalListing> = withContext(Dispatchers.IO) {
+        try {
+            val query = ParseQuery.getQuery<ParseObject>(CLASS_NAME)
+            query.orderByDescending("createdAt")
+            val objects = query.find()
+            val resultList = mutableListOf<RentalListing>()
+            for (obj in objects) {
+                try {
+                    resultList.add(RentalListing(
                         id = 0,
                         category = obj.getString("category") ?: "",
                         title = obj.getString("title") ?: "",
@@ -68,17 +38,58 @@ object SharedSyncService {
                         uuid = obj.getString("uuid") ?: "",
                         publishDate = obj.getString("publishDate") ?: "",
                         pricePeriod = obj.getString("pricePeriod") ?: ""
-                        )
-                        resultList.add(listing)
-                    } catch (ex: Exception) {
-                        Log.e(TAG, "Error parseando anuncio de Back4App", ex)
-                    }
-                }
-                onResult(resultList)
-            } else {
-                Log.e(TAG, "Error obteniendo anuncios de Back4App: ${e?.message}", e)
-                onResult(emptyList())
+                    ))
+                } catch (e: Exception) { }
             }
+            resultList
+        } catch (e: Exception) {
+            emptyList()
         }
     }
+
+    suspend fun uploadSharedListings(listings: List<RentalListing>): Boolean = withContext(Dispatchers.IO) {
+        try {
+            for (item in listings) {
+                val parseObject = ParseObject(CLASS_NAME).apply {
+                put("category", item.category)
+                put("title", item.title)
+                put("description", item.description)
+                put("price", item.price)
+                put("currency", item.currency)
+                put("province", item.province)
+                put("municipality", item.municipality)
+                put("exactAddress", item.exactAddress)
+                put("contactPhone", item.contactPhone)
+                put("contactWhatsApp", item.contactWhatsApp)
+                put("contactEmail", item.contactEmail)
+                put("imageUrl", item.imageUrl)
+                put("isFavorite", item.isFavorite)
+                put("isUserCreated", item.isUserCreated)
+                put("uuid", item.uuid)
+                put("publishDate", item.publishDate)
+                put("pricePeriod", item.pricePeriod)
+                }
+                parseObject.save()
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun deleteSharedListing(uuid: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val query = ParseQuery.getQuery<ParseObject>(CLASS_NAME)
+            query.whereEqualTo("uuid", uuid) 
+            val objects = query.find()
+            for (obj in objects) {
+                obj.delete()
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    
 }
