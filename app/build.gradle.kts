@@ -1,6 +1,5 @@
 plugins {
-    id("com.google.gms.google-services")
-  alias(libs.plugins.android.application)
+      alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
@@ -69,10 +68,9 @@ secrets {
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
+    implementation("com.github.parse-community.Parse-SDK-Android:parse:1.26.0")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    implementation("com.google.firebase:firebase-auth")
-    implementation("androidx.appcompat:appcompat:1.6.1")
+            implementation("androidx.appcompat:appcompat:1.6.1")
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)
@@ -126,5 +124,4 @@ dependencies {
 }
 
 dependencies {
-    implementation("com.google.firebase:firebase-firestore-ktx:25.0.0")
-}
+    }
