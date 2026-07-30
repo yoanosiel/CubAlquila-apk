@@ -1,6 +1,8 @@
 package com.example.data.repository
 
 import android.util.Log
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.example.data.model.RentalListing
 import com.parse.ParseObject
 import com.parse.ParseQuery
@@ -36,7 +38,7 @@ object SharedSyncService {
                         isFavorite = obj.getBoolean("isFavorite"),
                         isUserCreated = obj.getBoolean("isUserCreated"),
                         uuid = obj.getString("uuid") ?: "",
-                        publishDate = obj.getString("publishDate") ?: "",
+                        publishDate = obj.getLong("publishDate"),
                         pricePeriod = obj.getString("pricePeriod") ?: ""
                     ))
                 } catch (e: Exception) { }
@@ -95,8 +97,8 @@ object SharedSyncService {
 
     suspend fun uploadImage(imageBytes: ByteArray): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         try {
-            val mediaType = okhttp3.MediaType.parse("image/jpeg")
-            val body = okhttp3.RequestBody.create(mediaType, imageBytes)
+            val mediaType = "image/jpeg".toMediaTypeOrNull()
+            val body = imageBytes.toRequestBody(mediaType)
             val requestBody = okhttp3.MultipartBody.Builder()
                 .setType(okhttp3.MultipartBody.FORM)
                 .addFormDataPart("reqtype", "fileupload")
@@ -104,7 +106,7 @@ object SharedSyncService {
                 .build()
             val request = okhttp3.Request.Builder().url("https://catbox.moe/user/api.php").post(requestBody).build()
             okhttp3.OkHttpClient().newCall(request).execute().use { response ->
-                val url = response.body()?.string()?.trim()
+                val url = response.body?.string()?.trim()
                 if (url != null && url.startsWith("http")) url else null
             }
         } catch (e: Exception) {
