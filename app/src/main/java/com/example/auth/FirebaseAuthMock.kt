@@ -43,6 +43,10 @@ class FakeTask {
         executed = true
         listener?.invoke(this)
     }
+        fun addOnCompleteListener(activity: Any, l: (FakeTask) -> Unit) {
+        listener = l
+        if (executed) l(this)
+    }
     fun addOnCompleteListener(l: (FakeTask) -> Unit) {
         listener = l
         if (executed) l(this)
@@ -51,6 +55,6 @@ class FakeTask {
 
 class GoogleAuthProvider {
     companion object {
-        @JvmStatic fun getCredential(idToken: String, accessToken: String?) = Any()
+        @JvmStatic fun getCredential(idToken: String?, accessToken: String?) = Any()
     }
 }

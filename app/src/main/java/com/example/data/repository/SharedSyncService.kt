@@ -92,4 +92,23 @@ object SharedSyncService {
     }
 
     
+
+    suspend fun uploadImage(imageBytes: ByteArray): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val mediaType = okhttp3.MediaType.parse("image/jpeg")
+            val body = okhttp3.RequestBody.create(mediaType, imageBytes)
+            val requestBody = okhttp3.MultipartBody.Builder()
+                .setType(okhttp3.MultipartBody.FORM)
+                .addFormDataPart("reqtype", "fileupload")
+                .addFormDataPart("fileToUpload", "image.jpg", body)
+                .build()
+            val request = okhttp3.Request.Builder().url("https://catbox.moe/user/api.php").post(requestBody).build()
+            okhttp3.OkHttpClient().newCall(request).execute().use { response ->
+                val url = response.body()?.string()?.trim()
+                if (url != null && url.startsWith("http")) url else null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
