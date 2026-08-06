@@ -22,4 +22,4 @@ dependencyResolutionManagement {
   }
 }
 rootProject.name = "My Application"
-include(":app")
+include(":app")// Intento de compilacion Thu Aug  6 17:59:26 UTC 2026
