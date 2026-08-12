@@ -14,7 +14,7 @@ class CubAlquilaApplication : Application() {
             Parse.Configuration.Builder(this)
                 .applicationId(appId)
                 .clientKey(clientKey)
-                .server("https://parseapi.back4app.com")
+                .server("https://silent-sun-3c53.osiel-garcia9803.workers.dev")
                 .build()
         )
     }
