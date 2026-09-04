@@ -55,6 +55,17 @@ android {
     compose = true
     buildConfig = true
   }
+
+  buildTypes {
+    debug {
+      buildConfigField("String", "SUPABASE_URL", "\\"https://uasjkquovtypkkovgtyc.supabase.co\\"")
+      buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "System.getenv(\\"SUPABASE_PUBLISHABLE_KEY\\") ?: \\"\\"")
+    }
+    release {
+      buildConfigField("String", "SUPABASE_URL", "\\"https://uasjkquovtypkkovgtyc.supabase.co\\"")
+      buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "System.getenv(\\"SUPABASE_PUBLISHABLE_KEY\\") ?: \\"\\"")
+    }
+  }
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
@@ -68,7 +79,6 @@ secrets {
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
-    implementation("com.github.parse-community.Parse-SDK-Android:parse:1.26.0")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
             implementation("androidx.appcompat:appcompat:1.6.1")
   implementation(platform(libs.androidx.compose.bom))
