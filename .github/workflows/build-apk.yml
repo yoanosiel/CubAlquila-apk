@@ -1,74 +1,35 @@
-name: Compilar y Firmar APK
+name: Compilar APK de prueba
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [ migration-supabase ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
-    - name: Descargar Código del Repositorio
-      uses: actions/checkout@v4
+      - name: Descargar código
+        uses: actions/checkout@v4
 
-    - name: Configurar Java JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Configurar Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-    - name: Configurar Llave y Descubrir Alias Real
-      run: |
-        # 1. Buscar el archivo original
-        REAL_KEY=$(find . -name "taxicuba-identity.jks" | head -n 1)
-        
-        # 2. Crear una ruta ABSOLUTA para que Gradle no se pierda en sus carpetas internas
-        ABS_KEY_PATH="$(pwd)/my-upload-key.jks"
-        cp "$REAL_KEY" "$ABS_KEY_PATH"
-        
-        # 3. Leer mágicamente el archivo para extraer el Alias verdadero (ej. key0, upload, etc.)
-        REAL_ALIAS=$(keytool -list -v -keystore "$ABS_KEY_PATH" -storepass "Hisa.261199." | grep -iE "(Alias name|Nombre de alias)" | head -n 1 | cut -d':' -f2 | xargs)
-        
-        # Si por alguna razón está vacío, usamos 'key0' que es el estándar de Android
-        if [ -z "$REAL_ALIAS" ]; then
-          REAL_ALIAS="key0"
-        fi
-        
-        echo "¡Alias interno descubierto!: '$REAL_ALIAS'"
-        
-        # Guardamos estas variables en el entorno de GitHub para los siguientes pasos
-        echo "KEY_PATH=$ABS_KEY_PATH" >> $GITHUB_ENV
-        echo "KEY_ALIAS=$REAL_ALIAS" >> $GITHUB_ENV
+      - name: Dar permisos a Gradle
+        run: chmod +x ./gradlew
 
-    - name: Conceder permisos de ejecución a gradlew
-      run: chmod +x ./gradlew
+      - name: Compilar APK de prueba
+        run: ./gradlew assembleDebug --no-configuration-cache
 
-    - name: Compilar APK (Modo Release)
-      # Ahora inyectamos la ruta absoluta y el alias que acabamos de descubrir
-      run: |
-        ./gradlew assembleRelease --no-configuration-cache \
-          -Pandroid.injected.signing.store.file="${{ env.KEY_PATH }}" \
-          -Pandroid.injected.signing.store.password="Hisa.261199." \
-          -Pandroid.injected.signing.key.alias="${{ env.KEY_ALIAS }}" \
-          -Pandroid.injected.signing.key.password="Hisa.261199."
-
-    - name: Instalar apksigner en el servidor
-      run: sudo apt-get update && sudo apt-get install -y apksigner
-
-    - name: Sellar y Renombrar APK a CubAlquila
-      run: |
-        APK_PATH=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
-        echo "APK lista para firmar: $APK_PATH"
-        
-        # Usamos el mismo alias exacto para sellarla al final con su nombre correcto
-        apksigner sign --ks "${{ env.KEY_PATH }}" --ks-pass pass:"Hisa.261199." --ks-key-alias "${{ env.KEY_ALIAS }}" --out CubAlquila.apk "$APK_PATH"
-
-    - name: Subir APK Generado a GitHub
-      uses: actions/upload-artifact@v4
-      with:
-        name: CubAlquila-Descarga
-        path: CubAlquila.apk
+      - name: Subir APK de prueba
+        uses: actions/upload-artifact@v4
+        with:
+          name: CubAlquila-Supabase-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
