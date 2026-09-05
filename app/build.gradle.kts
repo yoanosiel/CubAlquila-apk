@@ -1,5 +1,5 @@
 plugins {
-      alias(libs.plugins.android.application)
+  alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
@@ -16,7 +16,6 @@ android {
     targetSdk = 36
     versionCode = 2
     versionName = "1.1"
-
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
@@ -24,9 +23,9 @@ android {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      storePassword = System.getenv("STORE_PASSWORD") ?: ""
+      keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+      keyPassword = System.getenv("KEY_PASSWORD") ?: ""
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
@@ -42,42 +41,36 @@ android {
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
+      val supabaseKey = System.getenv("SUPABASE_PUBLISHABLE_KEY") ?: ""
+      buildConfigField("String", "SUPABASE_URL", "\"https://uasjkquovtypkkovgtyc.supabase.co\"")
+      buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabaseKey\"")
     }
     debug {
       signingConfig = signingConfigs.getByName("debugConfig")
+      val supabaseKey = System.getenv("SUPABASE_PUBLISHABLE_KEY") ?: ""
+      buildConfigField("String", "SUPABASE_URL", "\"https://uasjkquovtypkkovgtyc.supabase.co\"")
+      buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabaseKey\"")
     }
   }
+
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
+
   buildFeatures {
     compose = true
     buildConfig = true
   }
 
-  buildTypes {
-    debug {
-      buildConfigField("String", "SUPABASE_URL", "\\"https://uasjkquovtypkkovgtyc.supabase.co\\"")
-      buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "System.getenv(\\"SUPABASE_PUBLISHABLE_KEY\\") ?: \\"\\"")
-    }
-    release {
-      buildConfigField("String", "SUPABASE_URL", "\\"https://uasjkquovtypkkovgtyc.supabase.co\\"")
-      buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "System.getenv(\\"SUPABASE_PUBLISHABLE_KEY\\") ?: \\"\\"")
-    }
-  }
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
 }
 
-// Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in the future if needed.
 dependencies {
     implementation("com.google.android.gms:play-services-auth:21.2.0")
             implementation("androidx.appcompat:appcompat:1.6.1")
