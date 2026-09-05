@@ -21,8 +21,8 @@ object SharedSyncService {
 
     private fun rest(path: String): Request.Builder = Request.Builder()
         .url(SupabaseConfig.URL + "/rest/v1/" + path)
-        .header("apikey", SupabaseConfig.PUBLISHABLE_KEY)
-        .header("Authorization", "Bearer " + SupabaseConfig.PUBLISHABLE_KEY)
+        .addHeader("apikey", SupabaseConfig.PUBLISHABLE_KEY)
+        .addHeader("Authorization", "Bearer " + SupabaseConfig.PUBLISHABLE_KEY)
 
     suspend fun fetchSharedListings(): List<RentalListing> = withContext(Dispatchers.IO) {
         try {
@@ -99,7 +99,7 @@ object SharedSyncService {
                     })
                 }
                 val request = rest(SupabaseConfig.LISTINGS_TABLE)
-                    .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                    .addHeader("Prefer", "resolution=ignore-duplicates,return=minimal")
                     .post(payload.toString().toRequestBody(jsonType))
                     .build()
                 client.newCall(request).execute().use { response ->
@@ -132,9 +132,9 @@ object SharedSyncService {
             val path = UUID.randomUUID().toString() + ".jpg"
             val request = Request.Builder()
                 .url(SupabaseConfig.URL + "/storage/v1/object/" + SupabaseConfig.IMAGES_BUCKET + "/" + path)
-                .header("apikey", SupabaseConfig.PUBLISHABLE_KEY)
-                .header("Authorization", "Bearer " + SupabaseConfig.PUBLISHABLE_KEY)
-                .header("Content-Type", "image/jpeg")
+                .addHeader("apikey", SupabaseConfig.PUBLISHABLE_KEY)
+                .addHeader("Authorization", "Bearer " + SupabaseConfig.PUBLISHABLE_KEY)
+                .addHeader("Content-Type", "image/jpeg")
                 .post(imageBytes.toRequestBody("image/jpeg".toMediaType()))
                 .build()
             client.newCall(request).execute().use { response ->
