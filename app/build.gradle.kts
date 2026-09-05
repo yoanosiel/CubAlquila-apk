@@ -28,7 +28,7 @@ android {
       keyPassword = System.getenv("KEY_PASSWORD") ?: ""
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
+      storeFile = file("${System.getProperty("java.io.tmpdir")}/debug.keystore")
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"
@@ -36,6 +36,9 @@ android {
   }
 
   buildTypes {
+    debug { 
+      signingConfig = signingConfigs.getByName("debug")
+    }
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
