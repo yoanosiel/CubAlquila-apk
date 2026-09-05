@@ -29,7 +29,9 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Compilar APK de prueba
-        run: ./gradlew assembleDebug --no-configuration-cache
+        run: ./gradlew assembleDebug --no-configuration-cache -Pksp.incremental=false
+        env:
+          JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
 
       - name: Subir APK de prueba
         uses: actions/upload-artifact@v4
